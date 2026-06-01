@@ -894,7 +894,7 @@ td.iframe-cell {
 
     <div class="notice notice-info" role="note">
       <span>ℹ</span>
-      <span>Upload the CSV (or Excel file) downloaded from the Wordly portal after bulk session creation. The tool will apply your iFrame config above to every session and add an <strong>iframe_code</strong> column (and an <strong>iframe_url</strong> column).</span>
+      <span>Upload the CSV (or Excel file) downloaded from the Wordly portal after bulk session creation. The tool will apply your iFrame config above to every session and add an <strong>iframe_code</strong> column for Cvent (and an <strong>iframe_url</strong> column).</span>
     </div>
 
     <label class="upload-zone" for="xlsxInput" id="uploadZone" aria-describedby="uploadDesc">
@@ -1249,12 +1249,7 @@ uploadZone.addEventListener('drop', e => {
 
 // CSV parser — handles quoted fields and Excel ="value" escapes
 function parseCSV(text) {
-  const lines = text.replace(/
-/g, '
-').replace(/
-/g, '
-').split('
-');
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   return lines
     .filter(l => l.trim() !== '')
     .map(line => {
