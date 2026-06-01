@@ -512,6 +512,8 @@ input[type="color"] {
   cursor: pointer;
   transition: all 0.2s;
   background: var(--surface2);
+  display: block;
+  width: 100%;
 }
 
 .upload-zone:hover, .upload-zone.drag { border-color: var(--teal); background: var(--teal-light); }
@@ -519,8 +521,9 @@ input[type="color"] {
 
 .upload-icon {
   font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   display: block;
+  line-height: 1;
 }
 
 .upload-title { font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem; }
@@ -915,7 +918,7 @@ td.iframe-cell {
         </table>
       </div>
       <div class="output-actions">
-        <button class="btn btn-primary" onclick="downloadMerged()" aria-label="Download merged spreadsheet">⬇ Download merged xlsx</button>
+        <button class="btn btn-primary" onclick="downloadMerged()" aria-label="Download merged spreadsheet">⬇ Download merged file</button>
         <button class="btn btn-secondary" onclick="clearMerge()" aria-label="Clear spreadsheet and start over">✕ Clear</button>
         <span class="row-count" id="rowCount" aria-live="polite"></span>
       </div>
@@ -1257,6 +1260,13 @@ function handleFile(file) {
         return;
       }
       var headers = rows[0].map(function(h) { return String(h || '').trim(); });
+      // Normalise all cells: strip Excel ="value" escapes regardless of source
+      rows = rows.map(function(row) {
+        return row.map(function(cell) {
+          var s = String(cell === undefined || cell === null ? '' : cell);
+          return s.replace(/^="(.*)"$/, '$1').trim();
+        });
+      });
       var sidIdx = headers.findIndex(function(h) { return h.toLowerCase().indexOf('session') !== -1 && h.toLowerCase().indexOf('id') !== -1; });
       var pcIdx  = headers.findIndex(function(h) { return h.toLowerCase().indexOf('passcode') !== -1; });
       if (sidIdx === -1) {
