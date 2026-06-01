@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordly iFrame Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* v1.1 — Wordly iframe Builder + Spreadsheet Merge — official brand colors */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface2: #f0f1f4;
+  --border: #e2e4ea;
+  --border-strong: #c8cad4;
+  --text: #0f1117;
+  --text2: #52566a;
+  --text3: #8a8fa8;
+  --accent: #1a6bfa;
+  --accent-light: #e8f0ff;
+  --accent-mid: #1a73e8;
+  --teal: #00c2a8;
+  --teal-light: #e0faf7;
+  --warn: #b85c00;
+  --warn-light: #fff3e6;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0;
+}
+
+.app-header {
+  background: var(--accent);
+  color: #fff;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 2rem;
+}
+
+.app-header-teal {
+  height: 3px;
+  background: var(--teal);
+  width: 100%;
+}
+
+.app-header .logo-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255,255,255,0.3);
+  margin: 0 2px;
+}
+
+.app-header .logo-sub {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 0.04em;
+}
+
+.lang-status {
+  margin-left: auto;
+  font-size: 0.78rem;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lang-status .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #7ee8a2;
+}
+.lang-status .dot.warn { background: #ffc87a; }
+
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-label {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 0.25rem;
+  font-weight: normal;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: normal;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .app-header { padding: 1rem; }
+  .main { padding: 1rem; }
+}
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+
+label {
+  font-size: 0.82rem;
+  color: var(--text2);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+label .hint {
+  font-size: 0.74rem;
+  color: var(--text3);
+  margin-left: 4px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  width: 100%;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0,194,168,0.15);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.toggle-row:last-child { border-bottom: none; }
+
+.toggle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-label .name {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.toggle-label .desc {
+  font-size: 0.75rem;
+  color: var(--text3);
+}
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.toggle input { opacity: 0; width: 0; height: 0; }
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border-strong);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle input:checked + .toggle-track { background: var(--teal); }
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 3px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+.toggle input:focus + .toggle-track {
+  box-shadow: 0 0 0 3px rgba(0,194,168,0.2);
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+input[type="color"] {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 2px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.color-hex {
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  color: var(--text2);
+  width: 75px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
+.radio-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.radio-group input { display: none; }
+
+.radio-group label {
+  flex: 1;
+  text-align: center;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text2);
+  border-right: 1px solid var(--border-strong);
+  transition: all 0.15s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+.radio-group label:last-of-type { border-right: none; }
+
+.radio-group input:checked + label {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* language picker */
+.lang-picker {
+  position: relative;
+}
+
+.lang-mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.lang-tab {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text2);
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  transition: all 0.15s;
+}
+
+.lang-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: var(--surface2);
+}
+
+.lang-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all 0.12s;
+  user-select: none;
+}
+
+.lang-chip:hover { border-color: var(--teal); }
+
+.lang-chip.selected {
+  background: var(--teal-light);
+  border-color: var(--teal);
+  color: #007a6a;
+}
+
+.lang-chip input[type="checkbox"] { display: none; }
+
+.lang-chip-code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--text3);
+  background: var(--surface2);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.lang-chip.selected .lang-chip-code {
+  background: var(--teal-light);
+  color: #007a6a;
+}
+
+.lang-none-msg {
+  font-size: 0.8rem;
+  color: var(--text3);
+  font-style: italic;
+  padding: 8px;
+}
+
+/* preview panel */
+.preview-panel {
+  background: var(--text);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-top: 1.25rem;
+}
+
+.preview-row {
+  margin-bottom: 0.75rem;
+}
+
+.preview-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a7a72;
+  margin-bottom: 5px;
+}
+
+.preview-code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: #a8e6c8;
+  word-break: break-all;
+  line-height: 1.5;
+  background: rgba(255,255,255,0.04);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+
+.preview-code .sid { color: #ffd27a; }
+.preview-code .param { color: #7ecfff; }
+.preview-code .val { color: #ff9f7a; }
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 5px;
+  background: transparent;
+  color: #a0a098;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  transition: all 0.15s;
+}
+
+.copy-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.copy-btn.copied { color: #7ee8a2; border-color: #7ee8a2; }
+
+/* iframe visual preview */
+.iframe-preview-container {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.iframe-preview-header {
+  background: var(--surface2);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+
+.iframe-preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  font-size: 0.8rem;
+  color: var(--text3);
+  font-style: italic;
+}
+
+/* action buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-primary:hover { background: #1258d4; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover { background: var(--surface2); }
+
+.btn-warn {
+  background: var(--warn);
+  color: #fff;
+  border-color: var(--warn);
+}
+
+.btn-warn:hover { background: #9a4d00; }
+
+/* upload zone */
+.upload-zone {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface2);
+}
+
+.upload-zone:hover, .upload-zone.drag { border-color: var(--teal); background: var(--teal-light); }
+.upload-zone.drag { border-style: solid; }
+
+.upload-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.upload-title { font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem; }
+.upload-sub { font-size: 0.8rem; color: var(--text3); }
+
+.file-input { display: none; }
+
+/* results table */
+.results-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 1.25rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-weight: normal;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+
+td.iframe-cell {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* status pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+}
+
+.pill-ok { background: var(--teal-light); color: #007a6a; }
+.pill-warn { background: var(--warn-light); color: var(--warn); }
+
+/* notice box */
+.notice {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  margin-bottom: 1.25rem;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+
+.notice-info { background: var(--teal-light); color: #007a6a; border: 1px solid rgba(0,194,168,0.25); }
+.notice-warn { background: var(--warn-light); color: var(--warn); border: 1px solid rgba(184,92,0,0.2); }
+
+/* divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.5rem 0 1.25rem;
+  color: var(--text3);
+  font-size: 0.78rem;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* output actions */
+.output-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.row-count {
+  font-size: 0.82rem;
+  color: var(--text3);
+  margin-left: auto;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+</style>
+</head>
+<body>
+
+<h2 class="sr-only">Wordly iFrame builder — configure iFrame parameters and merge with session spreadsheet</h2>
+
+<header class="app-header" role="banner">
+  <div class="app-header-bar">
+    <svg xmlns="http://www.w3.org/2000/svg" height="28" viewBox="0 0 108 33" fill="none" aria-label="Wordly" role="img" style="color:#fff;flex-shrink:0;"><title>Wordly</title><g clip-path="url(#clip0_2061_12667)"><path d="M35.1107 5.03864L36.3379 0.364479H34.1934C30.8595 0.364479 27.9403 2.61779 27.0942 5.8428L24.4305 16.0288L20.5353 0.360291H15.7104L11.8362 15.966L9.18498 5.8428C8.34313 2.61779 5.42387 0.364479 2.08997 0.364479H0L1.22718 5.03864H2.08997C3.3004 5.03864 4.36004 5.85537 4.66579 7.0281L8.77872 22.8306H14.2068L18.127 7.75267L22.0473 22.8306H27.4754L31.6176 7.0281C31.9234 5.85955 32.983 5.03864 34.1934 5.03864H35.1107Z" fill="currentColor"/><path d="M52.5254 13.7125V22.8263H57.1996V13.7125C57.1996 12.0581 58.5482 10.7095 60.2026 10.7095H62.3219L63.5449 6.03534H60.2026C55.9682 6.03534 52.5254 9.47814 52.5254 13.7125Z" fill="currentColor"/><path d="M46.1003 7.11507C44.7726 6.36955 43.2942 6.00098 41.6691 6.00098C40.044 6.00098 38.5572 6.37374 37.2211 7.11507C35.885 7.86059 34.817 8.87416 34.0254 10.16C33.2296 11.4458 32.8359 12.9243 32.8359 14.5912C32.8359 16.2582 33.2338 17.7115 34.0254 19.0099C34.8212 20.3083 35.885 21.326 37.2211 22.0716C38.5572 22.8171 40.0398 23.1857 41.6691 23.1857C43.2984 23.1857 44.7768 22.8129 46.1003 22.0716C47.428 21.326 48.4877 20.3083 49.2835 19.0099C50.0793 17.7115 50.473 16.2414 50.473 14.5912C50.473 12.941 50.0751 11.4458 49.2835 10.16C48.4877 8.87416 47.428 7.8564 46.1003 7.11507ZM45.2711 16.9451C44.9192 17.6278 44.4376 18.1597 43.8219 18.545C43.2104 18.9261 42.49 19.1188 41.6649 19.1188C40.8398 19.1188 40.1152 18.9261 39.4954 18.545C38.8713 18.1639 38.3855 17.6319 38.0336 16.9451C37.6818 16.2624 37.5059 15.4791 37.5059 14.5912C37.5059 13.7033 37.6818 12.9285 38.0336 12.2541C38.3855 11.5798 38.8713 11.0479 39.4954 10.6542C40.1194 10.2605 40.8398 10.0678 41.6649 10.0678C42.49 10.0678 43.2062 10.2647 43.8219 10.6542C44.4334 11.0479 44.9192 11.5798 45.2711 12.2541C45.6229 12.9285 45.7988 13.7075 45.7988 14.5912C45.7988 15.475 45.6229 16.2624 45.2711 16.9451Z" fill="currentColor"/><path d="M76.8053 7.76515C76.3739 7.33375 75.8713 6.96518 75.2808 6.68037C74.3468 6.22803 73.2746 6.00186 72.0683 6.00186C70.5019 6.00186 69.0821 6.383 67.8172 7.14946C66.5523 7.91174 65.5471 8.94206 64.8016 10.2404C64.0561 11.5388 63.6875 12.988 63.6875 14.5963C63.6875 16.2046 64.0561 17.6328 64.789 18.9396C65.522 20.2463 66.523 21.2809 67.7879 22.0473C69.0527 22.8096 70.4935 23.1949 72.1018 23.1949C73.2285 23.1949 74.2714 22.9897 75.2389 22.575C75.9802 22.2567 76.6043 21.8211 77.1069 21.2725V22.8347H81.3287V0H76.8053V7.76515ZM76.2734 16.9459C75.9216 17.6286 75.4357 18.1606 74.8117 18.5459C74.1876 18.927 73.463 19.1197 72.6421 19.1197C71.8212 19.1197 71.0799 18.927 70.4265 18.5459C69.7731 18.1647 69.2663 17.6328 68.902 16.9459C68.5418 16.2632 68.3575 15.48 68.3575 14.5921C68.3575 13.7042 68.5376 12.9293 68.902 12.255C69.2622 11.5807 69.7731 11.0488 70.4265 10.6551C71.0799 10.2614 71.817 10.0687 72.6421 10.0687C73.4672 10.0687 74.1918 10.2614 74.8117 10.6425C75.4357 11.0237 75.9216 11.5556 76.2734 12.2425C76.6252 12.9252 76.8011 13.7084 76.8011 14.5963C76.8011 15.4842 76.6252 16.2674 76.2734 16.9501V16.9459Z" fill="currentColor"/><path d="M88.5214 0H83.998V22.8263H88.5214V0Z" fill="currentColor"/><path d="M108.003 6.36133H103.148L99.9611 15.0395C99.7014 15.6301 99.4543 16.2248 99.2114 16.8237L95.3707 6.36133H90.5164L96.9748 22.746C96.4848 24.0821 95.8984 25.481 95.178 26.214C93.243 28.6976 88.64 28.5678 88.5395 24.9114H84.0371C83.9533 28.3668 86.6129 31.5289 89.9971 32.1446C94.8262 33.1791 99.1443 29.6526 100.594 25.2967L108.003 6.36133Z" fill="currentColor"/></g><defs><clipPath id="clip0_2061_12667"><rect width="108" height="32.3296" fill="currentColor"/></clipPath></defs></svg>
+    <div class="logo-divider" aria-hidden="true"></div>
+    <span class="logo-sub">iFrame builder</span>
+    <div class="lang-status" id="langStatus" aria-live="polite">
+      <span class="dot warn" id="langDot"></span>
+      <span id="langStatusText">Loading languages…</span>
+    </div>
+  </div>
+  <div class="app-header-teal"></div>
+</header>
+
+<main class="main" id="main">
+
+  <!-- SECTION 1: SESSION ID + BASICS -->
+  <section class="section" aria-labelledby="s1-title">
+    <div class="section-label">Step 1</div>
+    <h2 class="section-title" id="s1-title">Session &amp; display basics</h2>
+
+    <div class="grid2" style="margin-bottom:1.25rem;">
+      <div class="field">
+        <label for="sessionId">Session ID <span class="hint">(for preview — will be replaced in merge)</span></label>
+        <input type="text" id="sessionId" placeholder="ABCD-1234" maxlength="9" autocomplete="off" aria-describedby="sessionId-hint">
+        <span id="sessionId-hint" class="sr-only">Format: 4 letters, dash, 4 numbers</span>
+      </div>
+      <div class="field">
+        <label for="passcode">Passcode <span class="hint">(leave blank if open session)</span></label>
+        <input type="text" id="passcode" placeholder="optional" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Width</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="iframeWidth" value="100%" style="flex:1;">
+          <select id="widthUnit" style="width:70px;" aria-label="Width unit">
+            <option value="">—</option>
+            <option value="px">px</option>
+            <option value="%">%</option>
+            <option value="em">em</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Height</label>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="iframeHeight" value="400px" style="flex:1;">
+          <select id="heightUnit" style="width:70px;" aria-label="Height unit">
+            <option value="">—</option>
+            <option value="px">px</option>
+            <option value="%">%</option>
+            <option value="em">em</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: APPEARANCE -->
+  <section class="section" aria-labelledby="s2-title">
+    <div class="section-label">Step 2</div>
+    <h2 class="section-title" id="s2-title">Appearance</h2>
+
+    <div class="grid2" style="margin-bottom:1.25rem;">
+      <div class="field">
+        <label>Text color <span class="hint">(fgcolor — default: white)</span></label>
+        <div class="color-row">
+          <input type="color" id="fgcolorPicker" value="#ffffff" aria-label="Text color picker">
+          <input type="text" class="color-hex" id="fgcolorHex" value="#FFFFFF" maxlength="7" aria-label="Text color hex value">
+          <label style="font-size:0.78rem;color:var(--text3);flex:1;">
+            <input type="checkbox" id="fgDefault" checked> Use default
+          </label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Background color <span class="hint">(bgcolor — default: black)</span></label>
+        <div class="color-row">
+          <input type="color" id="bgcolorPicker" value="#000000" aria-label="Background color picker">
+          <input type="text" class="color-hex" id="bgcolorHex" value="#000000" maxlength="7" aria-label="Background color hex value">
+          <label style="font-size:0.78rem;color:var(--text3);flex:1;">
+            <input type="checkbox" id="bgDefault" checked> Use default
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" style="max-width:260px;">
+      <label>Text size <span class="hint">(fgsize — default: container size)</span></label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="checkbox" id="fgsizeEnabled" style="width:auto;" aria-label="Enable custom text size">
+        <input type="text" id="fgsizeVal" value="1em" style="flex:1;" disabled aria-label="Text size value">
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: BEHAVIOR TOGGLES -->
+  <section class="section" aria-labelledby="s3-title">
+    <div class="section-label">Step 3</div>
+    <h2 class="section-title" id="s3-title">Behavior options</h2>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <span class="name">Show speaker names</span>
+        <span class="desc">tags — displays speaker name above phrases. Default: on</span>
+      </div>
+      <label class="toggle" aria-label="Show speaker names">
+        <input type="checkbox" id="togTags" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <span class="name">Show speaker language</span>
+        <span class="desc">speakerLanguage — displays source language label. Default: on</span>
+      </div>
+      <label class="toggle" aria-label="Show speaker language">
+        <input type="checkbox" id="togSpeakerLang" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <span class="name">Enable text-to-speech (TTS)</span>
+        <span class="desc">enableTTS — adds voice selection and mute controls. Default: off</span>
+      </div>
+      <label class="toggle" aria-label="Enable text-to-speech">
+        <input type="checkbox" id="togTTS">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <span class="name">Show complete phrases only</span>
+        <span class="desc">finalOnly — suppress partial translations. Default: off</span>
+      </div>
+      <label class="toggle" aria-label="Show complete phrases only">
+        <input type="checkbox" id="togFinalOnly">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-label">
+        <span class="name">Show scrollbar</span>
+        <span class="desc">showScrollbar — allow users to scroll transcript history. Default: on</span>
+      </div>
+      <label class="toggle" aria-label="Show scrollbar">
+        <input type="checkbox" id="togScrollbar" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div style="margin-top:1.25rem;" class="field">
+      <label>Default language <span class="hint">(lang — attendee's initial translation language)</span></label>
+      <select id="defaultLang" aria-label="Default language">
+        <option value="">Not set (user's last choice or English)</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- SECTION 4: LANGUAGE FILTER -->
+  <section class="section" aria-labelledby="s4-title">
+    <div class="section-label">Step 4</div>
+    <h2 class="section-title" id="s4-title">Language filter <span style="font-size:0.78rem;color:var(--text3);font-weight:normal;">(show or hide — pick one mode)</span></h2>
+
+    <div class="notice notice-warn" role="note">
+      <span>⚠</span>
+      <span><strong>show</strong> and <strong>hide</strong> are mutually exclusive. Selecting languages in one mode clears the other.</span>
+    </div>
+
+    <div class="lang-mode-tabs" role="tablist" aria-label="Language filter mode">
+      <button class="lang-tab active" id="tabNone" role="tab" aria-selected="true" onclick="setLangMode('none')">No filter</button>
+      <button class="lang-tab" id="tabShow" role="tab" aria-selected="false" onclick="setLangMode('show')">Show only</button>
+      <button class="lang-tab" id="tabHide" role="tab" aria-selected="false" onclick="setLangMode('hide')">Hide these</button>
+    </div>
+
+    <div id="langPickerWrap">
+      <p class="lang-none-msg" id="langNoneMsg">No language filter applied — all languages available to attendees.</p>
+      <div class="lang-grid" id="langGrid" style="display:none;" role="group" aria-label="Language selection"></div>
+    </div>
+
+    <div id="langSelectionSummary" style="margin-top:8px;font-size:0.78rem;color:var(--text3);"></div>
+  </section>
+
+  <!-- SECTION 5: PREVIEW -->
+  <section class="section" aria-labelledby="s5-title">
+    <div class="section-label">Step 5</div>
+    <h2 class="section-title" id="s5-title">Preview &amp; copy</h2>
+
+    <div class="preview-panel" role="region" aria-label="Generated iFrame code">
+      <div class="preview-row">
+        <div class="preview-label">Attend URL</div>
+        <div class="preview-code" id="previewUrl" aria-live="polite">https://attend.wordly.ai/frame/<span class="sid">ABCD-1234</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="copy-btn" onclick="copyText('previewUrl','copyUrl')" id="copyUrl" aria-label="Copy URL to clipboard">⎘ Copy URL</button>
+          <button class="copy-btn" onclick="toggleLivePreview()" id="previewUrlBtn" aria-label="Open live iFrame preview">▶ Preview URL</button>
+        </div>
+      </div>
+      <div class="preview-row">
+        <div class="preview-label">iFrame tag</div>
+        <div class="preview-code" id="previewIframe" aria-live="polite"></div>
+        <button class="copy-btn" onclick="copyText('previewIframe','copyIframe')" id="copyIframe" aria-label="Copy iFrame tag to clipboard">⎘ Copy iFrame</button>
+      </div>
+    </div>
+
+    <div class="iframe-preview-container">
+      <div class="iframe-preview-header">Color preview — enter a real session ID and click Preview URL to load the live attend UI</div>
+      <div class="iframe-preview-frame" id="colorPreviewBox" aria-label="Color preview" role="img">
+        <div id="colorPreviewInner" style="padding:16px 24px;border-radius:6px;font-size:0.85rem;line-height:1.6;max-width:340px;text-align:center;">
+          Sample translation text will appear here
+        </div>
+      </div>
+    </div>
+
+    <div id="livePreviewWrap" style="display:none;margin-top:1rem;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <div style="background:var(--surface2);padding:6px 12px;font-size:0.75rem;color:var(--text3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span id="livePreviewLabel">Live iFrame preview</span>
+        <button class="copy-btn" onclick="closeLivePreview()" style="border:none;padding:2px 6px;" aria-label="Close live preview">✕ Close</button>
+      </div>
+      <iframe id="livePreviewFrame" src="" style="width:100%;height:360px;border:none;display:block;" title="Live Wordly iFrame preview"></iframe>
+    </div>
+  </section>
+
+  <!-- SECTION 6: SPREADSHEET MERGE -->
+  <section class="section" aria-labelledby="s6-title">
+    <div class="section-label">Step 6 — optional</div>
+    <h2 class="section-title" id="s6-title">Spreadsheet merge</h2>
+
+    <div class="notice notice-info" role="note">
+      <span>ℹ</span>
+      <span>Upload the Excel file downloaded from the Wordly portal after bulk session creation. The tool will apply your iFrame config above to every session and add an <strong>iframe_code</strong> column for Cvent (and an <strong>iframe_url</strong> column).</span>
+    </div>
+
+    <label class="upload-zone" for="xlsxInput" id="uploadZone" aria-describedby="uploadDesc">
+      <span class="upload-icon" aria-hidden="true">📊</span>
+      <div class="upload-title">Drop your Wordly session spreadsheet here</div>
+      <div class="upload-sub" id="uploadDesc">or click to browse — .xlsx or .xls accepted</div>
+    </label>
+    <input type="file" class="file-input" id="xlsxInput" accept=".xlsx,.xls" aria-label="Upload Wordly session spreadsheet">
+
+    <div id="mergeStatus" style="margin-top:1rem;"></div>
+
+    <div id="mergeResults" style="display:none;">
+      <div class="divider">Preview</div>
+      <div class="results-wrap">
+        <table id="resultsTable" aria-label="Merged session data">
+          <thead id="resultsHead"></thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+      <div class="output-actions">
+        <button class="btn btn-primary" onclick="downloadMerged()" aria-label="Download merged spreadsheet">⬇ Download merged xlsx</button>
+        <button class="btn btn-secondary" onclick="clearMerge()" aria-label="Clear spreadsheet and start over">✕ Clear</button>
+        <span class="row-count" id="rowCount" aria-live="polite"></span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// v1.0 — Wordly iframe Builder
+// Language snapshot (fetched live on load, this is fallback)
+const LANG_SNAPSHOT = [
+  {englishName:"Afrikaans",wordlyCode:"af"},{englishName:"Albanian",wordlyCode:"sq"},
+  {englishName:"Arabic",wordlyCode:"ar"},{englishName:"Armenian",wordlyCode:"hy"},
+  {englishName:"Bengali",wordlyCode:"bn"},{englishName:"Bosnian",wordlyCode:"bs"},
+  {englishName:"Bulgarian",wordlyCode:"bg"},{englishName:"Cantonese",wordlyCode:"zh-HK"},
+  {englishName:"Catalan",wordlyCode:"ca"},{englishName:"Chinese (Simplified)",wordlyCode:"zh-CN"},
+  {englishName:"Chinese (Traditional)",wordlyCode:"zh-TW"},{englishName:"Croatian",wordlyCode:"hr"},
+  {englishName:"Czech",wordlyCode:"cs"},{englishName:"Danish",wordlyCode:"da"},
+  {englishName:"Dutch",wordlyCode:"nl"},{englishName:"English (US)",wordlyCode:"en"},
+  {englishName:"English (UK)",wordlyCode:"en-GB"},{englishName:"English (AU)",wordlyCode:"en-AU"},
+  {englishName:"Estonian",wordlyCode:"et"},{englishName:"Finnish",wordlyCode:"fi"},
+  {englishName:"French (FR)",wordlyCode:"fr"},{englishName:"French (CA)",wordlyCode:"fr-CA"},
+  {englishName:"Georgian",wordlyCode:"ka"},{englishName:"German",wordlyCode:"de"},
+  {englishName:"Greek",wordlyCode:"el"},{englishName:"Gujarati",wordlyCode:"gu"},
+  {englishName:"Haitian Creole",wordlyCode:"ht"},{englishName:"Hebrew",wordlyCode:"he"},
+  {englishName:"Hindi",wordlyCode:"hi"},{englishName:"Hungarian",wordlyCode:"hu"},
+  {englishName:"Icelandic",wordlyCode:"is"},{englishName:"Indonesian",wordlyCode:"id"},
+  {englishName:"Irish",wordlyCode:"ga"},{englishName:"Italian",wordlyCode:"it"},
+  {englishName:"Japanese",wordlyCode:"ja"},{englishName:"Kannada",wordlyCode:"kn"},
+  {englishName:"Korean",wordlyCode:"ko"},{englishName:"Lao",wordlyCode:"lo"},
+  {englishName:"Latvian",wordlyCode:"lv"},{englishName:"Lithuanian",wordlyCode:"lt"},
+  {englishName:"Macedonian",wordlyCode:"mk"},{englishName:"Malay",wordlyCode:"ms"},
+  {englishName:"Maltese",wordlyCode:"mt"},{englishName:"Norwegian",wordlyCode:"no"},
+  {englishName:"Persian",wordlyCode:"fa"},{englishName:"Polish",wordlyCode:"pl"},
+  {englishName:"Portuguese (PT)",wordlyCode:"pt"},{englishName:"Portuguese (BR)",wordlyCode:"pt-BR"},
+  {englishName:"Punjabi",wordlyCode:"pa"},{englishName:"Romanian",wordlyCode:"ro"},
+  {englishName:"Russian",wordlyCode:"ru"},{englishName:"Serbian",wordlyCode:"sr"},
+  {englishName:"Slovak",wordlyCode:"sk"},{englishName:"Slovenian",wordlyCode:"sl"},
+  {englishName:"Spanish (ES)",wordlyCode:"es"},{englishName:"Spanish (LatAm)",wordlyCode:"es-MX"},
+  {englishName:"Swahili",wordlyCode:"sw"},{englishName:"Swedish",wordlyCode:"sv"},
+  {englishName:"Tagalog",wordlyCode:"tl"},{englishName:"Tamil",wordlyCode:"ta"},
+  {englishName:"Thai",wordlyCode:"th"},{englishName:"Turkish",wordlyCode:"tr"},
+  {englishName:"Ukrainian",wordlyCode:"uk"},{englishName:"Urdu",wordlyCode:"ur"},
+  {englishName:"Vietnamese",wordlyCode:"vi"},{englishName:"Welsh",wordlyCode:"cy"},
+  {englishName:"Zulu",wordlyCode:"zu"}
+];
+
+let languages = [];
+let langMode = 'none';
+let selectedLangs = new Set();
+let mergedData = null;
+let mergedHeaders = [];
+
+// Normalize session ID
+function normalizeSessionId(raw) {
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (clean.length >= 8) {
+    return clean.slice(0,4) + '-' + clean.slice(4,8);
+  }
+  return raw.toUpperCase();
+}
+
+// Load languages — try live, fall back to snapshot
+async function loadLanguages() {
+  const dot = document.getElementById('langDot');
+  const statusText = document.getElementById('langStatusText');
+  try {
+    const res = await fetch('https://assets.wordly.ai/language-config/languages.json', {
+      cache: 'no-cache',
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    languages = data.languages;
+    dot.className = 'dot';
+    statusText.textContent = languages.length + ' languages (live)';
+  } catch(e) {
+    languages = LANG_SNAPSHOT;
+    dot.className = 'dot warn';
+    statusText.textContent = languages.length + ' languages (cached)';
+  }
+  populateLangPicker();
+  populateDefaultLang();
+}
+
+function populateDefaultLang() {
+  const sel = document.getElementById('defaultLang');
+  languages.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.wordlyCode;
+    opt.textContent = l.englishName + ' (' + l.wordlyCode + ')';
+    sel.appendChild(opt);
+  });
+}
+
+function populateLangPicker() {
+  const grid = document.getElementById('langGrid');
+  grid.innerHTML = '';
+  languages.forEach(l => {
+    const chip = document.createElement('label');
+    chip.className = 'lang-chip';
+    chip.setAttribute('data-code', l.wordlyCode);
+    chip.innerHTML = `<input type="checkbox" value="${l.wordlyCode}" onchange="toggleLang('${l.wordlyCode}',this.checked)" aria-label="${l.englishName}"><span class="lang-chip-code">${l.wordlyCode}</span>${l.englishName}`;
+    grid.appendChild(chip);
+  });
+}
+
+function setLangMode(mode) {
+  langMode = mode;
+  selectedLangs.clear();
+  ['None','Show','Hide'].forEach(m => {
+    const btn = document.getElementById('tab' + m);
+    btn.classList.toggle('active', mode === m.toLowerCase());
+    btn.setAttribute('aria-selected', mode === m.toLowerCase() ? 'true' : 'false');
+  });
+  const grid = document.getElementById('langGrid');
+  const noneMsg = document.getElementById('langNoneMsg');
+  if (mode === 'none') {
+    grid.style.display = 'none';
+    noneMsg.style.display = '';
+  } else {
+    grid.style.display = 'grid';
+    noneMsg.style.display = 'none';
+    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    grid.querySelectorAll('.lang-chip').forEach(c => c.classList.remove('selected'));
+  }
+  updateSummary();
+  updatePreview();
+}
+
+function toggleLang(code, checked) {
+  if (checked) selectedLangs.add(code);
+  else selectedLangs.delete(code);
+  const chip = document.querySelector(`.lang-chip[data-code="${code}"]`);
+  if (chip) chip.classList.toggle('selected', checked);
+  updateSummary();
+  updatePreview();
+}
+
+function updateSummary() {
+  const el = document.getElementById('langSelectionSummary');
+  if (langMode === 'none' || selectedLangs.size === 0) { el.textContent = ''; return; }
+  const names = [...selectedLangs].map(c => {
+    const l = languages.find(x => x.wordlyCode === c);
+    return l ? l.englishName : c;
+  });
+  el.textContent = (langMode === 'show' ? 'Showing only: ' : 'Hiding: ') + names.join(', ');
+}
+
+// Build URL params
+function buildParams(sessionId, passcode) {
+  const params = [];
+
+  const pc = passcode || document.getElementById('passcode').value.trim();
+  if (pc) params.push(['key', pc]);
+
+  const defaultLang = document.getElementById('defaultLang').value;
+  if (defaultLang) params.push(['lang', defaultLang]);
+
+  const fgDefault = document.getElementById('fgDefault').checked;
+  if (!fgDefault) {
+    const fg = document.getElementById('fgcolorHex').value.replace('#','');
+    if (fg) params.push(['fgcolor', fg]);
+  }
+
+  const bgDefault = document.getElementById('bgDefault').checked;
+  if (!bgDefault) {
+    const bg = document.getElementById('bgcolorHex').value.replace('#','');
+    if (bg) params.push(['bgcolor', bg]);
+  }
+
+  const fgsizeEnabled = document.getElementById('fgsizeEnabled').checked;
+  if (fgsizeEnabled) {
+    const sz = document.getElementById('fgsizeVal').value.trim();
+    if (sz) params.push(['fgsize', sz]);
+  }
+
+  if (!document.getElementById('togTags').checked) params.push(['tags', 'false']);
+  if (!document.getElementById('togSpeakerLang').checked) params.push(['speakerLanguage', 'false']);
+  if (document.getElementById('togTTS').checked) params.push(['enableTTS', 'true']);
+  if (document.getElementById('togFinalOnly').checked) params.push(['finalOnly', 'true']);
+  if (!document.getElementById('togScrollbar').checked) params.push(['showScrollbar', 'false']);
+
+  if (langMode !== 'none' && selectedLangs.size > 0) {
+    params.push([langMode, [...selectedLangs].join(',')]);
+  }
+
+  return params;
+}
+
+function buildUrl(sessionId, passcode) {
+  const sid = sessionId || document.getElementById('sessionId').value.trim() || 'ABCD-1234';
+  const normalSid = normalizeSessionId(sid);
+  const params = buildParams(sessionId, passcode);
+  const qs = params.length ? '?' + params.map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&') : '';
+  return 'https://attend.wordly.ai/frame/' + normalSid + qs;
+}
+
+function buildIframeTag(sessionId, passcode) {
+  const url = buildUrl(sessionId, passcode);
+  const w = document.getElementById('iframeWidth').value.trim() || '100%';
+  const h = document.getElementById('iframeHeight').value.trim() || '400px';
+  return `<iframe src="${url}" width="${w}" height="${h}">`;
+}
+
+function syntaxHighlight(tag) {
+  return tag
+    .replace(/<iframe/, '<span style="color:#7ecfff;">&lt;iframe</span>')
+    .replace(/src="([^"]*)"/, (m, url) => {
+      const urlH = url.replace(/(ABCD-1234|[A-Z]{4}-\d{4})/g, '<span class="sid">$1</span>')
+        .replace(/([?&])([^=]+)=([^&"]*)/g, (mm, sep, k, v) =>
+          sep + '<span class="param">' + k + '</span>=<span class="val">' + v + '</span>');
+      return `src="${urlH}"`;
+    })
+    .replace(/(width|height)="([^"]*)"/, (m, k, v) =>
+      `<span style="color:#c8c8b0;">${k}</span>="<span style="color:#e8c87a;">${v}</span>"`);
+}
+
+function updatePreview() {
+  const url = buildUrl();
+  const tag = buildIframeTag();
+
+  const urlEl = document.getElementById('previewUrl');
+  urlEl.innerHTML = syntaxHighlight(url.replace('https://attend.wordly.ai/frame/', 'https://attend.wordly.ai/frame/'));
+
+  const iframeEl = document.getElementById('previewIframe');
+  iframeEl.innerHTML = syntaxHighlight(tag);
+
+  updateColorPreview();
+  refreshLivePreviewIfOpen();
+}
+
+function refreshLivePreviewIfOpen() {
+  const wrap = document.getElementById('livePreviewWrap');
+  if (wrap.style.display === 'none') return;
+  const frame = document.getElementById('livePreviewFrame');
+  frame.src = buildUrl();
+}
+
+function updateColorPreview() {
+  const box = document.getElementById('colorPreviewBox');
+  const inner = document.getElementById('colorPreviewInner');
+  const bgDefault = document.getElementById('bgDefault').checked;
+  const fgDefault = document.getElementById('fgDefault').checked;
+  const bg = bgDefault ? '#000000' : document.getElementById('bgcolorHex').value;
+  const fg = fgDefault ? '#ffffff' : document.getElementById('fgcolorHex').value;
+  box.style.background = bg;
+  inner.style.color = fg;
+}
+
+// Color sync
+function syncColor(pickerId, hexId, defaultId) {
+  const picker = document.getElementById(pickerId);
+  const hex = document.getElementById(hexId);
+  const def = document.getElementById(defaultId);
+
+  picker.addEventListener('input', () => {
+    hex.value = picker.value.toUpperCase();
+    def.checked = false;
+    updatePreview();
+  });
+
+  hex.addEventListener('input', () => {
+    const v = hex.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      picker.value = v.toLowerCase();
+      def.checked = false;
+    }
+    updatePreview();
+  });
+
+  def.addEventListener('change', updatePreview);
+}
+
+// Copy
+function copyText(elId, btnId) {
+  const el = document.getElementById(elId);
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Session ID normalization on blur
+document.getElementById('sessionId').addEventListener('blur', function() {
+  const raw = this.value.trim();
+  if (raw && raw.length >= 8) this.value = normalizeSessionId(raw);
+  updatePreview();
+});
+
+// fgsize toggle
+document.getElementById('fgsizeEnabled').addEventListener('change', function() {
+  document.getElementById('fgsizeVal').disabled = !this.checked;
+  updatePreview();
+});
+
+// Wire all change events
+['sessionId','passcode','iframeWidth','iframeHeight','defaultLang','fgsizeVal'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+['togTags','togSpeakerLang','togTTS','togFinalOnly','togScrollbar'].forEach(id => {
+  document.getElementById(id).addEventListener('change', updatePreview);
+});
+
+// XLSX merge
+const uploadZone = document.getElementById('uploadZone');
+const xlsxInput = document.getElementById('xlsxInput');
+
+xlsxInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  const status = document.getElementById('mergeStatus');
+  status.innerHTML = '<div class="notice notice-info" role="status"><span>⏳</span><span>Reading spreadsheet…</span></div>';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      if (!rows || rows.length < 2) {
+        status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Spreadsheet appears empty or has no data rows.</span></div>';
+        return;
+      }
+
+      const headers = rows[0].map(h => String(h || '').trim());
+      const sidIdx = headers.findIndex(h => h.toLowerCase().includes('session') && h.toLowerCase().includes('id'));
+      const pcIdx  = headers.findIndex(h => h.toLowerCase() === 'passcode' || h.toLowerCase().includes('passcode'));
+
+      if (sidIdx === -1) {
+        status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Could not find a "Session ID" column. Check that you uploaded the correct Wordly output file.</span></div>';
+        return;
+      }
+
+      mergedHeaders = [...headers, 'iframe_url', 'iframe_code'];
+      mergedData = [];
+
+      const dataRows = rows.slice(1).filter(r => r && r.some(c => c !== undefined && c !== ''));
+
+      dataRows.forEach(row => {
+        const rawSid = String(row[sidIdx] || '').trim();
+        const sid = rawSid ? normalizeSessionId(rawSid) : '';
+        const pc = pcIdx !== -1 ? String(row[pcIdx] || '').trim() : '';
+
+        const iframeUrl = sid ? buildUrl(sid, pc) : '';
+        const iframeTag = sid ? buildIframeTag(sid, pc) : '';
+
+        mergedData.push([...row, iframeUrl, iframeTag]);
+      });
+
+      renderResultsTable();
+      document.getElementById('rowCount').textContent = mergedData.length + ' sessions processed';
+      document.getElementById('mergeResults').style.display = '';
+      status.innerHTML = '<div class="notice notice-info" role="status"><span>✓</span><span>Merge complete — ' + mergedData.length + ' sessions. Preview below.</span></div>';
+
+    } catch(err) {
+      status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Error reading file: ' + err.message + '</span></div>';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderResultsTable() {
+  const head = document.getElementById('resultsHead');
+  const body = document.getElementById('resultsBody');
+  const PREVIEW_COLS = ['Title','Session ID','Passcode','Attend URL','iframe_url','iframe_code'];
+
+  const showHeaders = mergedHeaders.filter(h => PREVIEW_COLS.includes(h));
+  const showIdxs = showHeaders.map(h => mergedHeaders.indexOf(h));
+
+  head.innerHTML = '<tr>' + showHeaders.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+  const MAX_PREVIEW = 8;
+  const preview = mergedData.slice(0, MAX_PREVIEW);
+
+  body.innerHTML = preview.map(row => {
+    const cells = showIdxs.map((idx, ci) => {
+      const val = row[idx] !== undefined ? String(row[idx]) : '';
+      const isIframe = showHeaders[ci].startsWith('iframe');
+      return `<td class="${isIframe ? 'iframe-cell' : ''}" title="${val.replace(/"/g,'&quot;')}">${val ? (val.length > 60 ? val.slice(0,57) + '…' : val) : '<span style="color:var(--text3)">—</span>'}</td>`;
+    });
+    return '<tr>' + cells.join('') + '</tr>';
+  }).join('');
+
+  if (mergedData.length > MAX_PREVIEW) {
+    const span = showHeaders.length;
+    body.innerHTML += `<tr><td colspan="${span}" style="text-align:center;color:var(--text3);font-style:italic;padding:10px;">… and ${mergedData.length - MAX_PREVIEW} more rows (all included in download)</td></tr>`;
+  }
+}
+
+function downloadMerged() {
+  if (!mergedData) return;
+  const ws = XLSX.utils.aoa_to_sheet([mergedHeaders, ...mergedData]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sessions with iframes');
+
+  ws['!cols'] = mergedHeaders.map((h, i) => {
+    if (h === 'iframe_code') return { wch: 80 };
+    if (h === 'iframe_url') return { wch: 80 };
+    if (h === 'Session ID') return { wch: 14 };
+    return { wch: 20 };
+  });
+
+  XLSX.writeFile(wb, 'wordly-sessions-with-iframes.xlsx');
+}
+
+function clearMerge() {
+  mergedData = null;
+  mergedHeaders = [];
+  document.getElementById('mergeResults').style.display = 'none';
+  document.getElementById('mergeStatus').innerHTML = '';
+  document.getElementById('xlsxInput').value = '';
+}
+
+// Live preview
+function toggleLivePreview() {
+  const wrap = document.getElementById('livePreviewWrap');
+  const frame = document.getElementById('livePreviewFrame');
+  const btn = document.getElementById('previewUrlBtn');
+  const label = document.getElementById('livePreviewLabel');
+  const isOpen = wrap.style.display !== 'none';
+  if (isOpen) {
+    closeLivePreview();
+  } else {
+    const url = buildUrl();
+    frame.src = url;
+    label.textContent = 'Live iFrame preview — ' + url.split('?')[0].replace('https://attend.wordly.ai/frame/', 'Session: ');
+    wrap.style.display = '';
+    btn.textContent = '▼ Hide preview';
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function closeLivePreview() {
+  const wrap = document.getElementById('livePreviewWrap');
+  const frame = document.getElementById('livePreviewFrame');
+  const btn = document.getElementById('previewUrlBtn');
+  frame.src = '';
+  wrap.style.display = 'none';
+  btn.textContent = '▶ Preview URL';
+}
+
+// Init
+syncColor('fgcolorPicker', 'fgcolorHex', 'fgDefault');
+syncColor('bgcolorPicker', 'bgcolorHex', 'bgDefault');
+loadLanguages();
+updatePreview();
+</script>
+
+</body>
+</html>
