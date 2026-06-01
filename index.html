@@ -737,11 +737,21 @@ td.iframe-cell {
       </div>
     </div>
 
-    <div class="field" style="max-width:260px;">
-      <label>Text size <span class="hint">(fgsize — default: container size)</span></label>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="checkbox" id="fgsizeEnabled" style="width:auto;" aria-label="Enable custom text size">
-        <input type="text" id="fgsizeVal" value="1em" style="flex:1;" disabled aria-label="Text size value">
+    <div class="field" style="max-width:320px;">
+      <label>Text size <span class="hint">(fgsize — optional, default: container size)</span></label>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:2px;">
+        <label class="toggle" aria-label="Enable custom text size">
+          <input type="checkbox" id="fgsizeEnabled">
+          <span class="toggle-track"></span>
+        </label>
+        <span style="font-size:0.8rem;color:var(--text3);min-width:36px;" id="fgsizeOnOff">Off</span>
+        <input type="text" id="fgsizeVal" value="1" style="width:70px;" disabled aria-label="Text size value">
+        <select id="fgsizeUnit" style="width:75px;" disabled aria-label="Text size unit">
+          <option value="em">em</option>
+          <option value="px">px</option>
+          <option value="rem">rem</option>
+          <option value="%">%</option>
+        </select>
       </div>
     </div>
   </section>
@@ -884,15 +894,15 @@ td.iframe-cell {
 
     <div class="notice notice-info" role="note">
       <span>ℹ</span>
-      <span>Upload the Excel file downloaded from the Wordly portal after bulk session creation. The tool will apply your iFrame config above to every session and add an <strong>iframe_code</strong> column for Cvent (and an <strong>iframe_url</strong> column).</span>
+      <span>Upload the CSV (or Excel file) downloaded from the Wordly portal after bulk session creation. The tool will apply your iFrame config above to every session and add an <strong>iframe_code</strong> column for Cvent (and an <strong>iframe_url</strong> column).</span>
     </div>
 
     <label class="upload-zone" for="xlsxInput" id="uploadZone" aria-describedby="uploadDesc">
       <span class="upload-icon" aria-hidden="true">📊</span>
       <div class="upload-title">Drop your Wordly session spreadsheet here</div>
-      <div class="upload-sub" id="uploadDesc">or click to browse — .xlsx or .xls accepted</div>
+      <div class="upload-sub" id="uploadDesc">or click to browse — .csv, .xlsx or .xls accepted</div>
     </label>
-    <input type="file" class="file-input" id="xlsxInput" accept=".xlsx,.xls" aria-label="Upload Wordly session spreadsheet">
+    <input type="file" class="file-input" id="xlsxInput" accept=".csv,.xlsx,.xls" aria-label="Upload Wordly session spreadsheet">
 
     <div id="mergeStatus" style="margin-top:1rem;"></div>
 
@@ -959,6 +969,7 @@ let langMode = 'none';
 let selectedLangs = new Set();
 let mergedData = null;
 let mergedHeaders = [];
+let mergedIsCSV = false;
 
 // Normalize session ID
 function normalizeSessionId(raw) {
@@ -1081,7 +1092,8 @@ function buildParams(sessionId, passcode) {
   const fgsizeEnabled = document.getElementById('fgsizeEnabled').checked;
   if (fgsizeEnabled) {
     const sz = document.getElementById('fgsizeVal').value.trim();
-    if (sz) params.push(['fgsize', sz]);
+    const unit = document.getElementById('fgsizeUnit').value;
+    if (sz) params.push(['fgsize', sz + unit]);
   }
 
   if (!document.getElementById('togTags').checked) params.push(['tags', 'false']);
@@ -1203,12 +1215,16 @@ document.getElementById('sessionId').addEventListener('blur', function() {
 
 // fgsize toggle
 document.getElementById('fgsizeEnabled').addEventListener('change', function() {
-  document.getElementById('fgsizeVal').disabled = !this.checked;
+  const on = this.checked;
+  document.getElementById('fgsizeVal').disabled = !on;
+  document.getElementById('fgsizeUnit').disabled = !on;
+  document.getElementById('fgsizeOnOff').textContent = on ? 'On' : 'Off';
+  document.getElementById('fgsizeOnOff').style.color = on ? 'var(--teal)' : 'var(--text3)';
   updatePreview();
 });
 
 // Wire all change events
-['sessionId','passcode','iframeWidth','iframeHeight','defaultLang','fgsizeVal'].forEach(id => {
+['sessionId','passcode','iframeWidth','iframeHeight','defaultLang','fgsizeVal','fgsizeUnit'].forEach(id => {
   document.getElementById(id).addEventListener('input', updatePreview);
 });
 ['togTags','togSpeakerLang','togTTS','togFinalOnly','togScrollbar'].forEach(id => {
@@ -1231,33 +1247,73 @@ uploadZone.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 
+// CSV parser — handles quoted fields and Excel ="value" escapes
+function parseCSV(text) {
+  const lines = text.replace(/
+/g, '
+').replace(/
+/g, '
+').split('
+');
+  return lines
+    .filter(l => l.trim() !== '')
+    .map(line => {
+      const fields = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"' && !inQ) { inQ = true; continue; }
+        if (ch === '"' && inQ) {
+          if (line[i+1] === '"') { cur += '"'; i++; }
+          else inQ = false;
+          continue;
+        }
+        if (ch === ',' && !inQ) { fields.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      fields.push(cur);
+      // Strip Excel ="value" escape from each field
+      return fields.map(f => f.replace(/^="(.*)"$/, '$1').trim());
+    });
+}
+
+// CSV serialiser — quote fields that contain commas, quotes, or newlines
+function toCSVRow(row) {
+  return row.map(val => {
+    const s = val === undefined || val === null ? '' : String(val);
+    return (s.includes(',') || s.includes('"') || s.includes('
+'))
+      ? '"' + s.replace(/"/g, '""') + '"'
+      : s;
+  }).join(',');
+}
+
 function handleFile(file) {
   const status = document.getElementById('mergeStatus');
-  status.innerHTML = '<div class="notice notice-info" role="status"><span>⏳</span><span>Reading spreadsheet…</span></div>';
+  const isCSV = file.name.toLowerCase().endsWith('.csv');
+  status.innerHTML = '<div class="notice notice-info" role="status"><span>⏳</span><span>Reading file…</span></div>';
 
   const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
+  const processRows = (rows) => {
+    try {
       if (!rows || rows.length < 2) {
-        status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Spreadsheet appears empty or has no data rows.</span></div>';
+        status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>File appears empty or has no data rows.</span></div>';
         return;
       }
 
       const headers = rows[0].map(h => String(h || '').trim());
       const sidIdx = headers.findIndex(h => h.toLowerCase().includes('session') && h.toLowerCase().includes('id'));
-      const pcIdx  = headers.findIndex(h => h.toLowerCase() === 'passcode' || h.toLowerCase().includes('passcode'));
+      const pcIdx  = headers.findIndex(h => h.toLowerCase().includes('passcode'));
 
       if (sidIdx === -1) {
-        status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Could not find a "Session ID" column. Check that you uploaded the correct Wordly output file.</span></div>';
+        status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Could not find a "Session ID" column. Check that you uploaded the correct Wordly file.</span></div>';
         return;
       }
 
       mergedHeaders = [...headers, 'iframe_url', 'iframe_code'];
       mergedData = [];
+      mergedIsCSV = isCSV;
 
       const dataRows = rows.slice(1).filter(r => r && r.some(c => c !== undefined && c !== ''));
 
@@ -1265,10 +1321,8 @@ function handleFile(file) {
         const rawSid = String(row[sidIdx] || '').trim();
         const sid = rawSid ? normalizeSessionId(rawSid) : '';
         const pc = pcIdx !== -1 ? String(row[pcIdx] || '').trim() : '';
-
         const iframeUrl = sid ? buildUrl(sid, pc) : '';
         const iframeTag = sid ? buildIframeTag(sid, pc) : '';
-
         mergedData.push([...row, iframeUrl, iframeTag]);
       });
 
@@ -1278,10 +1332,21 @@ function handleFile(file) {
       status.innerHTML = '<div class="notice notice-info" role="status"><span>✓</span><span>Merge complete — ' + mergedData.length + ' sessions. Preview below.</span></div>';
 
     } catch(err) {
-      status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Error reading file: ' + err.message + '</span></div>';
+      status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Error processing file: ' + err.message + '</span></div>';
     }
   };
-  reader.readAsArrayBuffer(file);
+
+  if (isCSV) {
+    reader.onload = e => processRows(parseCSV(e.target.result));
+    reader.readAsText(file);
+  } else {
+    reader.onload = e => {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      processRows(XLSX.utils.sheet_to_json(ws, { header: 1 }));
+    };
+    reader.readAsArrayBuffer(file);
+  }
 }
 
 function renderResultsTable() {
@@ -1314,18 +1379,26 @@ function renderResultsTable() {
 
 function downloadMerged() {
   if (!mergedData) return;
-  const ws = XLSX.utils.aoa_to_sheet([mergedHeaders, ...mergedData]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Sessions with iframes');
-
-  ws['!cols'] = mergedHeaders.map((h, i) => {
-    if (h === 'iframe_code') return { wch: 80 };
-    if (h === 'iframe_url') return { wch: 80 };
-    if (h === 'Session ID') return { wch: 14 };
-    return { wch: 20 };
-  });
-
-  XLSX.writeFile(wb, 'wordly-sessions-with-iframes.xlsx');
+  if (mergedIsCSV) {
+    const lines = [mergedHeaders, ...mergedData].map(toCSVRow).join('
+');
+    const blob = new Blob([lines], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'wordly-sessions-with-iframes.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } else {
+    const ws = XLSX.utils.aoa_to_sheet([mergedHeaders, ...mergedData]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sessions with iframes');
+    ws['!cols'] = mergedHeaders.map(h => {
+      if (h === 'iframe_code' || h === 'iframe_url') return { wch: 80 };
+      if (h === 'Session ID') return { wch: 14 };
+      return { wch: 20 };
+    });
+    XLSX.writeFile(wb, 'wordly-sessions-with-iframes.xlsx');
+  }
 }
 
 function clearMerge() {
