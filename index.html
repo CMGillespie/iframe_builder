@@ -925,8 +925,8 @@ td.iframe-cell {
 </main>
 
 <script>
-// v1.0 — Wordly iframe Builder
-// Language snapshot (fetched live on load, this is fallback)
+<script>
+// v1.1c — Wordly iFrame Builder
 const LANG_SNAPSHOT = [
   {englishName:"Afrikaans",wordlyCode:"af"},{englishName:"Albanian",wordlyCode:"sq"},
   {englishName:"Arabic",wordlyCode:"ar"},{englishName:"Armenian",wordlyCode:"hy"},
@@ -971,16 +971,12 @@ let mergedData = null;
 let mergedHeaders = [];
 let mergedIsCSV = false;
 
-// Normalize session ID
 function normalizeSessionId(raw) {
   const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (clean.length >= 8) {
-    return clean.slice(0,4) + '-' + clean.slice(4,8);
-  }
+  if (clean.length >= 8) return clean.slice(0,4) + '-' + clean.slice(4,8);
   return raw.toUpperCase();
 }
 
-// Load languages — try live, fall back to snapshot
 async function loadLanguages() {
   const dot = document.getElementById('langDot');
   const statusText = document.getElementById('langStatusText');
@@ -1020,7 +1016,7 @@ function populateLangPicker() {
     const chip = document.createElement('label');
     chip.className = 'lang-chip';
     chip.setAttribute('data-code', l.wordlyCode);
-    chip.innerHTML = `<input type="checkbox" value="${l.wordlyCode}" onchange="toggleLang('${l.wordlyCode}',this.checked)" aria-label="${l.englishName}"><span class="lang-chip-code">${l.wordlyCode}</span>${l.englishName}`;
+    chip.innerHTML = '<input type="checkbox" value="' + l.wordlyCode + '" onchange="toggleLang(\'' + l.wordlyCode + '\',this.checked)" aria-label="' + l.englishName + '"><span class="lang-chip-code">' + l.wordlyCode + '</span>' + l.englishName;
     grid.appendChild(chip);
   });
 }
@@ -1051,7 +1047,7 @@ function setLangMode(mode) {
 function toggleLang(code, checked) {
   if (checked) selectedLangs.add(code);
   else selectedLangs.delete(code);
-  const chip = document.querySelector(`.lang-chip[data-code="${code}"]`);
+  const chip = document.querySelector('.lang-chip[data-code="' + code + '"]');
   if (chip) chip.classList.toggle('selected', checked);
   updateSummary();
   updatePreview();
@@ -1067,45 +1063,36 @@ function updateSummary() {
   el.textContent = (langMode === 'show' ? 'Showing only: ' : 'Hiding: ') + names.join(', ');
 }
 
-// Build URL params
 function buildParams(sessionId, passcode) {
   const params = [];
-
   const pc = passcode || document.getElementById('passcode').value.trim();
   if (pc) params.push(['key', pc]);
-
   const defaultLang = document.getElementById('defaultLang').value;
   if (defaultLang) params.push(['lang', defaultLang]);
-
   const fgDefault = document.getElementById('fgDefault').checked;
   if (!fgDefault) {
     const fg = document.getElementById('fgcolorHex').value.replace('#','');
     if (fg) params.push(['fgcolor', fg]);
   }
-
   const bgDefault = document.getElementById('bgDefault').checked;
   if (!bgDefault) {
     const bg = document.getElementById('bgcolorHex').value.replace('#','');
     if (bg) params.push(['bgcolor', bg]);
   }
-
   const fgsizeEnabled = document.getElementById('fgsizeEnabled').checked;
   if (fgsizeEnabled) {
     const sz = document.getElementById('fgsizeVal').value.trim();
     const unit = document.getElementById('fgsizeUnit').value;
     if (sz) params.push(['fgsize', sz + unit]);
   }
-
   if (!document.getElementById('togTags').checked) params.push(['tags', 'false']);
   if (!document.getElementById('togSpeakerLang').checked) params.push(['speakerLanguage', 'false']);
   if (document.getElementById('togTTS').checked) params.push(['enableTTS', 'true']);
   if (document.getElementById('togFinalOnly').checked) params.push(['finalOnly', 'true']);
   if (!document.getElementById('togScrollbar').checked) params.push(['showScrollbar', 'false']);
-
   if (langMode !== 'none' && selectedLangs.size > 0) {
     params.push([langMode, [...selectedLangs].join(',')]);
   }
-
   return params;
 }
 
@@ -1113,7 +1100,7 @@ function buildUrl(sessionId, passcode) {
   const sid = sessionId || document.getElementById('sessionId').value.trim() || 'ABCD-1234';
   const normalSid = normalizeSessionId(sid);
   const params = buildParams(sessionId, passcode);
-  const qs = params.length ? '?' + params.map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&') : '';
+  const qs = params.length ? '?' + params.map(function(p){ return p[0] + '=' + encodeURIComponent(p[1]); }).join('&') : '';
   return 'https://attend.wordly.ai/frame/' + normalSid + qs;
 }
 
@@ -1121,32 +1108,31 @@ function buildIframeTag(sessionId, passcode) {
   const url = buildUrl(sessionId, passcode);
   const w = document.getElementById('iframeWidth').value.trim() || '100%';
   const h = document.getElementById('iframeHeight').value.trim() || '400px';
-  return `<iframe src="${url}" width="${w}" height="${h}">`;
+  return '<iframe src="' + url + '" width="' + w + '" height="' + h + '">';
 }
 
 function syntaxHighlight(tag) {
   return tag
-    .replace(/<iframe/, '<span style="color:#7ecfff;">&lt;iframe</span>')
-    .replace(/src="([^"]*)"/, (m, url) => {
-      const urlH = url.replace(/(ABCD-1234|[A-Z]{4}-\d{4})/g, '<span class="sid">$1</span>')
-        .replace(/([?&])([^=]+)=([^&"]*)/g, (mm, sep, k, v) =>
-          sep + '<span class="param">' + k + '</span>=<span class="val">' + v + '</span>');
-      return `src="${urlH}"`;
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/&lt;iframe/, '<span style="color:#7ecfff;">&lt;iframe</span>')
+    .replace(/src="([^"]*)"/, function(m, url) {
+      var urlH = url
+        .replace(/(ABCD-1234|[A-Z]{4}-\d{4})/g, '<span class="sid">$1</span>')
+        .replace(/([?&])([^=]+)=([^&"]*)/g, function(mm, sep, k, v) {
+          return sep + '<span class="param">' + k + '</span>=<span class="val">' + v + '</span>';
+        });
+      return 'src="' + urlH + '"';
     })
-    .replace(/(width|height)="([^"]*)"/, (m, k, v) =>
-      `<span style="color:#c8c8b0;">${k}</span>="<span style="color:#e8c87a;">${v}</span>"`);
+    .replace(/(width|height)="([^"]*)"/, function(m, k, v) {
+      return '<span style="color:#c8c8b0;">' + k + '</span>="<span style="color:#e8c87a;">' + v + '</span>"';
+    });
 }
 
 function updatePreview() {
   const url = buildUrl();
   const tag = buildIframeTag();
-
-  const urlEl = document.getElementById('previewUrl');
-  urlEl.innerHTML = syntaxHighlight(url.replace('https://attend.wordly.ai/frame/', 'https://attend.wordly.ai/frame/'));
-
-  const iframeEl = document.getElementById('previewIframe');
-  iframeEl.innerHTML = syntaxHighlight(tag);
-
+  document.getElementById('previewUrl').innerHTML = syntaxHighlight(url);
+  document.getElementById('previewIframe').innerHTML = syntaxHighlight(tag);
   updateColorPreview();
   refreshLivePreviewIfOpen();
 }
@@ -1154,34 +1140,28 @@ function updatePreview() {
 function refreshLivePreviewIfOpen() {
   const wrap = document.getElementById('livePreviewWrap');
   if (wrap.style.display === 'none') return;
-  const frame = document.getElementById('livePreviewFrame');
-  frame.src = buildUrl();
+  document.getElementById('livePreviewFrame').src = buildUrl();
 }
 
 function updateColorPreview() {
   const box = document.getElementById('colorPreviewBox');
   const inner = document.getElementById('colorPreviewInner');
-  const bgDefault = document.getElementById('bgDefault').checked;
-  const fgDefault = document.getElementById('fgDefault').checked;
-  const bg = bgDefault ? '#000000' : document.getElementById('bgcolorHex').value;
-  const fg = fgDefault ? '#ffffff' : document.getElementById('fgcolorHex').value;
+  const bg = document.getElementById('bgDefault').checked ? '#000000' : document.getElementById('bgcolorHex').value;
+  const fg = document.getElementById('fgDefault').checked ? '#ffffff' : document.getElementById('fgcolorHex').value;
   box.style.background = bg;
   inner.style.color = fg;
 }
 
-// Color sync
 function syncColor(pickerId, hexId, defaultId) {
   const picker = document.getElementById(pickerId);
   const hex = document.getElementById(hexId);
   const def = document.getElementById(defaultId);
-
-  picker.addEventListener('input', () => {
+  picker.addEventListener('input', function() {
     hex.value = picker.value.toUpperCase();
     def.checked = false;
     updatePreview();
   });
-
-  hex.addEventListener('input', () => {
+  hex.addEventListener('input', function() {
     const v = hex.value.trim();
     if (/^#[0-9a-fA-F]{6}$/.test(v)) {
       picker.value = v.toLowerCase();
@@ -1189,155 +1169,130 @@ function syncColor(pickerId, hexId, defaultId) {
     }
     updatePreview();
   });
-
   def.addEventListener('change', updatePreview);
 }
 
-// Copy
 function copyText(elId, btnId) {
   const el = document.getElementById(elId);
   const text = el.innerText || el.textContent;
-  navigator.clipboard.writeText(text).then(() => {
+  navigator.clipboard.writeText(text).then(function() {
     const btn = document.getElementById(btnId);
     const orig = btn.textContent;
     btn.textContent = '✓ Copied';
     btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+    setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
   });
 }
 
-// Session ID normalization on blur
-document.getElementById('sessionId').addEventListener('blur', function() {
-  const raw = this.value.trim();
-  if (raw && raw.length >= 8) this.value = normalizeSessionId(raw);
-  updatePreview();
-});
+function toggleLivePreview() {
+  const wrap = document.getElementById('livePreviewWrap');
+  const frame = document.getElementById('livePreviewFrame');
+  const btn = document.getElementById('previewUrlBtn');
+  const label = document.getElementById('livePreviewLabel');
+  if (wrap.style.display !== 'none') {
+    closeLivePreview();
+  } else {
+    const url = buildUrl();
+    frame.src = url;
+    label.textContent = 'Live iFrame preview — Session: ' + url.split('?')[0].replace('https://attend.wordly.ai/frame/', '');
+    wrap.style.display = '';
+    btn.textContent = '▼ Hide preview';
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
 
-// fgsize toggle
-document.getElementById('fgsizeEnabled').addEventListener('change', function() {
-  const on = this.checked;
-  document.getElementById('fgsizeVal').disabled = !on;
-  document.getElementById('fgsizeUnit').disabled = !on;
-  document.getElementById('fgsizeOnOff').textContent = on ? 'On' : 'Off';
-  document.getElementById('fgsizeOnOff').style.color = on ? 'var(--teal)' : 'var(--text3)';
-  updatePreview();
-});
-
-// Wire all change events
-['sessionId','passcode','iframeWidth','iframeHeight','defaultLang','fgsizeVal','fgsizeUnit'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updatePreview);
-});
-['togTags','togSpeakerLang','togTTS','togFinalOnly','togScrollbar'].forEach(id => {
-  document.getElementById(id).addEventListener('change', updatePreview);
-});
-
-// XLSX merge
-const uploadZone = document.getElementById('uploadZone');
-const xlsxInput = document.getElementById('xlsxInput');
-
-xlsxInput.addEventListener('change', e => {
-  if (e.target.files[0]) handleFile(e.target.files[0]);
-});
-
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag');
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-});
+function closeLivePreview() {
+  const frame = document.getElementById('livePreviewFrame');
+  const btn = document.getElementById('previewUrlBtn');
+  frame.src = '';
+  document.getElementById('livePreviewWrap').style.display = 'none';
+  btn.textContent = '▶ Preview URL';
+}
 
 // CSV parser — handles quoted fields and Excel ="value" escapes
 function parseCSV(text) {
-  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  return lines
-    .filter(l => l.trim() !== '')
-    .map(line => {
-      const fields = [];
-      let cur = '', inQ = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"' && !inQ) { inQ = true; continue; }
-        if (ch === '"' && inQ) {
-          if (line[i+1] === '"') { cur += '"'; i++; }
-          else inQ = false;
-          continue;
-        }
-        if (ch === ',' && !inQ) { fields.push(cur); cur = ''; continue; }
-        cur += ch;
+  var normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var lines = normalized.split('\n').filter(function(l) { return l.trim() !== ''; });
+  return lines.map(function(line) {
+    var fields = [];
+    var cur = '';
+    var inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '"' && !inQ) { inQ = true; continue; }
+      if (ch === '"' && inQ) {
+        if (line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = false;
+        continue;
       }
-      fields.push(cur);
-      // Strip Excel ="value" escape from each field
-      return fields.map(f => f.replace(/^="(.*)"$/, '$1').trim());
+      if (ch === ',' && !inQ) { fields.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    fields.push(cur);
+    return fields.map(function(f) {
+      return f.replace(/^="(.*)"$/, '$1').trim();
     });
+  });
 }
 
-// CSV serialiser — quote fields that contain commas, quotes, or newlines
+// CSV serialiser — quote fields containing commas, quotes, or newlines
 function toCSVRow(row) {
-  return row.map(val => {
-    const s = val === undefined || val === null ? '' : String(val);
-    return (s.includes(',') || s.includes('"') || s.includes('
-'))
-      ? '"' + s.replace(/"/g, '""') + '"'
-      : s;
+  return row.map(function(val) {
+    var s = (val === undefined || val === null) ? '' : String(val);
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
   }).join(',');
 }
 
 function handleFile(file) {
-  const status = document.getElementById('mergeStatus');
-  const isCSV = file.name.toLowerCase().endsWith('.csv');
+  var status = document.getElementById('mergeStatus');
+  var isCSV = file.name.toLowerCase().endsWith('.csv');
   status.innerHTML = '<div class="notice notice-info" role="status"><span>⏳</span><span>Reading file…</span></div>';
 
-  const reader = new FileReader();
-
-  const processRows = (rows) => {
+  var processRows = function(rows) {
     try {
       if (!rows || rows.length < 2) {
         status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>File appears empty or has no data rows.</span></div>';
         return;
       }
-
-      const headers = rows[0].map(h => String(h || '').trim());
-      const sidIdx = headers.findIndex(h => h.toLowerCase().includes('session') && h.toLowerCase().includes('id'));
-      const pcIdx  = headers.findIndex(h => h.toLowerCase().includes('passcode'));
-
+      var headers = rows[0].map(function(h) { return String(h || '').trim(); });
+      var sidIdx = headers.findIndex(function(h) { return h.toLowerCase().indexOf('session') !== -1 && h.toLowerCase().indexOf('id') !== -1; });
+      var pcIdx  = headers.findIndex(function(h) { return h.toLowerCase().indexOf('passcode') !== -1; });
       if (sidIdx === -1) {
         status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Could not find a "Session ID" column. Check that you uploaded the correct Wordly file.</span></div>';
         return;
       }
-
-      mergedHeaders = [...headers, 'iframe_url', 'iframe_code'];
+      mergedHeaders = headers.concat(['iframe_url', 'iframe_code']);
       mergedData = [];
       mergedIsCSV = isCSV;
-
-      const dataRows = rows.slice(1).filter(r => r && r.some(c => c !== undefined && c !== ''));
-
-      dataRows.forEach(row => {
-        const rawSid = String(row[sidIdx] || '').trim();
-        const sid = rawSid ? normalizeSessionId(rawSid) : '';
-        const pc = pcIdx !== -1 ? String(row[pcIdx] || '').trim() : '';
-        const iframeUrl = sid ? buildUrl(sid, pc) : '';
-        const iframeTag = sid ? buildIframeTag(sid, pc) : '';
-        mergedData.push([...row, iframeUrl, iframeTag]);
+      var dataRows = rows.slice(1).filter(function(r) { return r && r.some(function(c) { return c !== undefined && c !== ''; }); });
+      dataRows.forEach(function(row) {
+        var rawSid = String(row[sidIdx] || '').trim();
+        var sid = rawSid ? normalizeSessionId(rawSid) : '';
+        var pc = pcIdx !== -1 ? String(row[pcIdx] || '').trim() : '';
+        var iframeUrl = sid ? buildUrl(sid, pc) : '';
+        var iframeTag = sid ? buildIframeTag(sid, pc) : '';
+        mergedData.push(row.concat([iframeUrl, iframeTag]));
       });
-
       renderResultsTable();
       document.getElementById('rowCount').textContent = mergedData.length + ' sessions processed';
       document.getElementById('mergeResults').style.display = '';
       status.innerHTML = '<div class="notice notice-info" role="status"><span>✓</span><span>Merge complete — ' + mergedData.length + ' sessions. Preview below.</span></div>';
-
     } catch(err) {
-      status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Error processing file: ' + err.message + '</span></div>';
+      status.innerHTML = '<div class="notice notice-warn" role="alert"><span>⚠</span><span>Error: ' + err.message + '</span></div>';
     }
   };
 
+  var reader = new FileReader();
   if (isCSV) {
-    reader.onload = e => processRows(parseCSV(e.target.result));
+    reader.onload = function(e) { processRows(parseCSV(e.target.result)); };
     reader.readAsText(file);
   } else {
-    reader.onload = e => {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
+    reader.onload = function(e) {
+      var wb = XLSX.read(e.target.result, { type: 'array' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
       processRows(XLSX.utils.sheet_to_json(ws, { header: 1 }));
     };
     reader.readAsArrayBuffer(file);
@@ -1345,49 +1300,44 @@ function handleFile(file) {
 }
 
 function renderResultsTable() {
-  const head = document.getElementById('resultsHead');
-  const body = document.getElementById('resultsBody');
-  const PREVIEW_COLS = ['Title','Session ID','Passcode','Attend URL','iframe_url','iframe_code'];
-
-  const showHeaders = mergedHeaders.filter(h => PREVIEW_COLS.includes(h));
-  const showIdxs = showHeaders.map(h => mergedHeaders.indexOf(h));
-
-  head.innerHTML = '<tr>' + showHeaders.map(h => `<th>${h}</th>`).join('') + '</tr>';
-
-  const MAX_PREVIEW = 8;
-  const preview = mergedData.slice(0, MAX_PREVIEW);
-
-  body.innerHTML = preview.map(row => {
-    const cells = showIdxs.map((idx, ci) => {
-      const val = row[idx] !== undefined ? String(row[idx]) : '';
-      const isIframe = showHeaders[ci].startsWith('iframe');
-      return `<td class="${isIframe ? 'iframe-cell' : ''}" title="${val.replace(/"/g,'&quot;')}">${val ? (val.length > 60 ? val.slice(0,57) + '…' : val) : '<span style="color:var(--text3)">—</span>'}</td>`;
+  var head = document.getElementById('resultsHead');
+  var body = document.getElementById('resultsBody');
+  var PREVIEW_COLS = ['Title','Session ID','Passcode','Attend URL','iframe_url','iframe_code'];
+  var showHeaders = mergedHeaders.filter(function(h) { return PREVIEW_COLS.indexOf(h) !== -1; });
+  var showIdxs = showHeaders.map(function(h) { return mergedHeaders.indexOf(h); });
+  head.innerHTML = '<tr>' + showHeaders.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr>';
+  var MAX_PREVIEW = 8;
+  var preview = mergedData.slice(0, MAX_PREVIEW);
+  body.innerHTML = preview.map(function(row) {
+    var cells = showIdxs.map(function(idx, ci) {
+      var val = row[idx] !== undefined ? String(row[idx]) : '';
+      var isIframe = showHeaders[ci].indexOf('iframe') !== -1;
+      var display = val ? (val.length > 60 ? val.slice(0,57) + '…' : val) : '<span style="color:var(--text3)">—</span>';
+      var escaped = val.replace(/"/g, '&quot;');
+      return '<td class="' + (isIframe ? 'iframe-cell' : '') + '" title="' + escaped + '">' + display + '</td>';
     });
     return '<tr>' + cells.join('') + '</tr>';
   }).join('');
-
   if (mergedData.length > MAX_PREVIEW) {
-    const span = showHeaders.length;
-    body.innerHTML += `<tr><td colspan="${span}" style="text-align:center;color:var(--text3);font-style:italic;padding:10px;">… and ${mergedData.length - MAX_PREVIEW} more rows (all included in download)</td></tr>`;
+    body.innerHTML += '<tr><td colspan="' + showHeaders.length + '" style="text-align:center;color:var(--text3);font-style:italic;padding:10px;">… and ' + (mergedData.length - MAX_PREVIEW) + ' more rows (all included in download)</td></tr>';
   }
 }
 
 function downloadMerged() {
   if (!mergedData) return;
   if (mergedIsCSV) {
-    const lines = [mergedHeaders, ...mergedData].map(toCSVRow).join('
-');
-    const blob = new Blob([lines], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
+    var lines = [mergedHeaders].concat(mergedData).map(toCSVRow).join('\r\n');
+    var blob = new Blob([lines], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'wordly-sessions-with-iframes.csv';
     a.click();
     URL.revokeObjectURL(a.href);
   } else {
-    const ws = XLSX.utils.aoa_to_sheet([mergedHeaders, ...mergedData]);
-    const wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet([mergedHeaders].concat(mergedData));
+    var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sessions with iframes');
-    ws['!cols'] = mergedHeaders.map(h => {
+    ws['!cols'] = mergedHeaders.map(function(h) {
       if (h === 'iframe_code' || h === 'iframe_url') return { wch: 80 };
       if (h === 'Session ID') return { wch: 14 };
       return { wch: 20 };
@@ -1399,44 +1349,55 @@ function downloadMerged() {
 function clearMerge() {
   mergedData = null;
   mergedHeaders = [];
+  mergedIsCSV = false;
   document.getElementById('mergeResults').style.display = 'none';
   document.getElementById('mergeStatus').innerHTML = '';
   document.getElementById('xlsxInput').value = '';
 }
 
-// Live preview
-function toggleLivePreview() {
-  const wrap = document.getElementById('livePreviewWrap');
-  const frame = document.getElementById('livePreviewFrame');
-  const btn = document.getElementById('previewUrlBtn');
-  const label = document.getElementById('livePreviewLabel');
-  const isOpen = wrap.style.display !== 'none';
-  if (isOpen) {
-    closeLivePreview();
-  } else {
-    const url = buildUrl();
-    frame.src = url;
-    label.textContent = 'Live iFrame preview — ' + url.split('?')[0].replace('https://attend.wordly.ai/frame/', 'Session: ');
-    wrap.style.display = '';
-    btn.textContent = '▼ Hide preview';
-    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-}
+// Upload zone wiring
+var uploadZone = document.getElementById('uploadZone');
+var xlsxInput = document.getElementById('xlsxInput');
+xlsxInput.addEventListener('change', function(e) { if (e.target.files[0]) handleFile(e.target.files[0]); });
+uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('drag'); });
+uploadZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  uploadZone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
 
-function closeLivePreview() {
-  const wrap = document.getElementById('livePreviewWrap');
-  const frame = document.getElementById('livePreviewFrame');
-  const btn = document.getElementById('previewUrlBtn');
-  frame.src = '';
-  wrap.style.display = 'none';
-  btn.textContent = '▶ Preview URL';
-}
+// Session ID normalise on blur
+document.getElementById('sessionId').addEventListener('blur', function() {
+  var raw = this.value.trim();
+  if (raw && raw.length >= 8) this.value = normalizeSessionId(raw);
+  updatePreview();
+});
+
+// fgsize toggle
+document.getElementById('fgsizeEnabled').addEventListener('change', function() {
+  var on = this.checked;
+  document.getElementById('fgsizeVal').disabled = !on;
+  document.getElementById('fgsizeUnit').disabled = !on;
+  document.getElementById('fgsizeOnOff').textContent = on ? 'On' : 'Off';
+  document.getElementById('fgsizeOnOff').style.color = on ? 'var(--teal)' : 'var(--text3)';
+  updatePreview();
+});
+
+// Wire all change events
+['sessionId','passcode','iframeWidth','iframeHeight','defaultLang','fgsizeVal','fgsizeUnit'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+['togTags','togSpeakerLang','togTTS','togFinalOnly','togScrollbar'].forEach(function(id) {
+  document.getElementById(id).addEventListener('change', updatePreview);
+});
 
 // Init
 syncColor('fgcolorPicker', 'fgcolorHex', 'fgDefault');
 syncColor('bgcolorPicker', 'bgcolorHex', 'bgDefault');
 loadLanguages();
 updatePreview();
+</script>
 </script>
 
 </body>
